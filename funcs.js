@@ -1,6 +1,9 @@
     const start = require("./index")
     function viewAllEmployees(){
-        console.log("view employees");
+        connection.query("SELECT employee.id, employee.first_name, employee.last_name, title, name AS department, salary, CONCAT_WS('', emp.first_name, ' ', emp.last_name) as manager FROM employee INNER JOIN role ON employee.role_id = role.id INNER JOIN department ON role.department_id = department.id INNER JOIN employee as emp ON employee.manager_id = emp.id;", function(err, data){
+            if (err) throw err;
+            console.table(data)
+        });
     };
     function addEmployee(){
         console.log("add employee");
