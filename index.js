@@ -45,35 +45,25 @@ function start() {
     }else if(startRes.choice === "Add Employee"){
       addEmployee();
     }else if(startRes.choice === "Remove Employee"){
-      funcs.removeEmployee();
-      start();
+      removeEmployee();
     }else if(startRes.choice === "Update Employee Role"){
-      funcs.updateEmployeeRole();
-      start();
+      updateEmployeeRole();
     }else if(startRes.choice === "Update Empoyee Manager"){
-      funcs.updateEmployeeManager();
-      start();
+      updateEmployeeManager();
     }else if(startRes.choice === "Update Employee Department"){
-      funcs.updateEmployeeDepartment();
-      start();
+      updateEmployeeDepartment();
     }else if(startRes.choice === "Add Role"){
-      funcs.addRole();
-      start();
+      addRole();
     }else if(startRes.choice === "Remove Role"){
-      funcs.removeRole();
-      start();
+      removeRole();
     }else if(startRes.choice === "View Roles"){
-      funcs.viewRoles();
-      start();
+      viewRoles();
     }else if(startRes.choice === "Add Department"){
-      funcs.addDepartment();
-      start();
+      addDepartment();
     }else if(startRes.choice === "Remove Department"){
-      funcs.removeDepartment();
-      start();
+      removeDepartment();
     }else if(startRes.choice === "View Departments"){
-      funcs.viewDepartment();
-      start();
+      viewDepartment();
     }else{
       connection.end();
     }
@@ -104,13 +94,46 @@ function addEmployee(){
   ])
   .then(function(addName){
     let addFirstName = addName.firstName;
-    let addLastName = addName.LastName;
+    let addLastName = addName.lastName;
 
-    chooseRole();
+    chooseRole(addFirstName, addLastName);
   })
 };
 function removeEmployee(){
-  console.log("remove employee");
+  connection.query("SELECT id, CONCAT(first_name, ' ', last_name) AS emp FROM employee;", function(err, data){
+    if (err) throw err;
+    let empChoices = [];
+    for(var i=0; i < data.length; i++){
+      empChoices.push(data[i].emp)
+    };
+    inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "Which Employee would you like to remove?",
+        choices: empChoices,
+        name: "chooseEmp"
+      }
+    ])
+    .then(function(removeEmp){
+      let empId = ""
+      for(var i =0; i < data.length; i++){
+        if (data[i].emp === removeEmp.chooseEmp){
+          empId = data[i].id
+        }
+      }
+      connection.query(
+        "DELETE FROM employee Where ?",
+        {
+          id: empId
+        },
+        function(err,res){
+          if(err) throw err;
+          console.log(`Employee ${removeEmp.chooseEmp} removed!`)
+          start();
+        })
+    })
+  })
 };
 function updateEmployeeRole(){
   console.log("update employee role");
@@ -140,7 +163,7 @@ function viewDepartment(){
   console.log("view department");
 };
 
-function chooseRole(){
+function chooseRole(addFirstName, addLastName){
   connection.query("SELECT id, title FROM role;", function(err, data){
     if (err) throw err;
     let roleChoices = [];
@@ -157,24 +180,23 @@ function chooseRole(){
       }
     ])
     .then(function(role){
-      let addEmpRole
+      let addEmpRole = "";
       for(var i =0; i < data.length; i++){
         if(data[i].title === role.chooseRole){
           addEmpRole = data[i].id
-          return
         }
       }
-      chooseManager();
+      chooseManager(addFirstName, addLastName, addEmpRole);
     })
 
   })
 };
-function chooseManager(){
-  connection.query("SELECT id, CONCAT(first_name, ' ', last_name) AS manager FROM employee;", function(err, manData){
+function chooseManager(addFirstName, addLastName, addEmpRole){
+  connection.query("SELECT id, CONCAT(first_name, ' ', last_name) AS manager FROM employee;", function(err, data){
     if (err) throw err;
     let manChoices = ["No Manager"];
-    for(var i=0; i < manData.length; i++){
-      manChoices.push(manData[i].manager)
+    for(var i=0; i < data.length; i++){
+      manChoices.push(data[i].manager)
     }
     inquirer
     .prompt([
@@ -185,12 +207,11 @@ function chooseManager(){
         name: "chooseMan"
       }
     ])
-    .then(function(role){
-      let addEmpMan
+    .then(function(manager){
+      let addEmpMan = null
       for(var i =0; i < data.length; i++){
-        if(manData[i].manager === role.chooseMan){
-          addEmpRole = manData[i].id
-          return
+        if(data[i].manager === manager.chooseMan){
+          addEmpMan = data[i].id
         }
       }
       connection.query(
