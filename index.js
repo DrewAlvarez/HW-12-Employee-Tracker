@@ -1,14 +1,14 @@
 const mysql = require("mysql");
 const inquirer = require("inquirer");
 const consoleTable = require("console.table")
-const config = require("./logs/config.json")
 const funcs = require("./funcs")
+require("dotenv").config();
 
 var connection = mysql.createConnection({
   host: "localhost",
   port: 3306,
   user: "root",
-  password: config.myPW,
+  password: process.env.MYSQLPW,
   database: "employee_trackerDB"
 });
   
@@ -29,7 +29,6 @@ function start() {
         "Remove Employee",
         "Update Employee Role",
         "Update Employee Manager",
-        "Update Employee Department",
         "Add Role",
         "Remove Role",
         "View Roles",
@@ -48,10 +47,8 @@ function start() {
       removeEmployee();
     }else if(startRes.choice === "Update Employee Role"){
       updateEmployeeRole();
-    }else if(startRes.choice === "Update Empoyee Manager"){
+    }else if(startRes.choice === "Update Employee Manager"){
       updateEmployeeManager();
-    }else if(startRes.choice === "Update Employee Department"){
-      updateEmployeeDepartment();
     }else if(startRes.choice === "Add Role"){
       addRole();
     }else if(startRes.choice === "Remove Role"){
@@ -136,31 +133,213 @@ function removeEmployee(){
   })
 };
 function updateEmployeeRole(){
-  console.log("update employee role");
+  connection.query("SELECT id, CONCAT(first_name, ' ', last_name) AS emp FROM employee;", function(err, data){
+    if (err) throw err;
+    let empChoices = [];
+    for(var i=0; i < data.length; i++){
+      empChoices.push(data[i].emp)
+    };
+    inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "Which Employee do you wish to update Role?",
+        choices: empChoices,
+        name:"updateEmp"
+      }
+    ])
+    .then(function(newRole){
+      let empId = "";
+      for(var i =0; i < data.length; i++){
+        if (data[i].emp === newRole.updateEmp){
+          empId = data[i].id
+        }
+      }
+      updateRole(empId);
+    })
+  })
 };
 function updateEmployeeManager(){
-  console.log("update employee manager");
-};
-function updateEmployeeDepartment(){
-  console.log("update employee department");
+  connection.query("SELECT id, CONCAT(first_name, ' ', last_name) AS emp FROM employee;", function(err, data){
+    if (err) throw err;
+    let empChoices = [];
+    for(var i=0; i < data.length; i++){
+      empChoices.push(data[i].emp)
+    };
+    inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "Which Employee do you wish to update the Manager?",
+        choices: empChoices,
+        name:"updateEmp"
+      }
+    ])
+    .then(function(newRole){
+      let empId = "";
+      for(var i =0; i < data.length; i++){
+        if (data[i].emp === newRole.updateEmp){
+          empId = data[i].id
+        }
+      }
+      updateManager(empId);
+    })
+  })
 };
 function addRole(){
-  console.log("add role");
+  connection.query("SELECT * FROM department;", function (err, data){
+    if (err) throw err;
+    let depoChoices = [];
+    for (var i =0; i < data.length; i++){
+      depoChoices.push(data[i].name)
+    }
+    inquirer
+    .prompt([
+      {
+        type: "input",
+        message: "What is the Role Title?",
+        name: "title"
+      },
+      {
+        type: "Input",
+        message: "What is the Salary for the Role?",
+        name: "salary"
+      },
+      {
+        type: "list",
+        message: "Which Department does the Role belong?",
+        choices: depoChoices,
+        name: "chooseDepo"
+      }
+    ])
+    .then(function(addRole){
+      let roleDepoId = "";
+      for(var i =0; i < data.length; i++){
+        if(addRole.chooseDepo === data[i].name){
+          roleDepoId = data[i].id
+        }
+      }
+      connection.query(
+        "INSERT INTO role SET ?",
+        {
+          title: addRole.title,
+          salary: addRole.salary,
+          department_id: roleDepoId
+        },
+        function(err, res){
+        if (err) throw err;
+        console.log(`${addRole.title} added to Roles!`);
+        start();
+
+      })
+    })
+  })
 };
 function removeRole(){
-  console.log("remove role");
+  connection.query("SELECT id, title FROM role;", function (err, data){
+    if (err) throw err;
+    let roleChoices = [];
+    for (var i =0; i < data.length; i++){
+      roleChoices.push(data[i].title)
+    }
+    inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "Which Role would you like to remove?",
+        choices: roleChoices,
+        name: "removeRole"
+      }
+    ])
+    .then(function(remRole){
+      let roleId = ""
+      for(var i =0; i < data.length; i++){
+        if (data[i].title === remRole.removeRole){
+          roleId = data[i].id
+        }
+      }
+      connection.query(
+        "DELETE FROM role Where ?",
+        {
+          id: roleId
+        },
+        function(err,res){
+          if(err) throw err;
+          console.log(`Role of ${remRole.removeRole} removed!`)
+          start();
+        })
+    })
+  })
 };
 function viewRoles(){
-  console.log("view roles");
+  connection.query("SELECT * FROM role;", function(err, data){
+    if (err) throw err;
+    console.table(data)
+    start();
+  })
 };
 function addDepartment(){
-  console.log("add department");
+  inquirer
+  .prompt([
+    {
+      type: "input",
+      message: "What is the Name of the Department you wish to add?",
+      name: "addDepo"
+    }
+  ])
+  .then(function (depoAdd){
+    connection.query(
+      "INSERT INTO department SET ?", 
+      {name: depoAdd.addDepo}, 
+      function (err, data){
+        if (err) throw err;
+        console.log(`${depoAdd.addDepo} added to Departments`);
+        start();
+      })
+  })
 };
 function removeDepartment(){
-  console.log("remove department");
+  connection.query("SELECT id, name FROM department;", function (err, data){
+    if (err) throw err;
+    let depoChoices = [];
+    for (var i =0; i < data.length; i++){
+      depoChoices.push(data[i].name)
+    }
+    inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "Which Department would you like to remove?",
+        choices: depoChoices,
+        name: "removeDepo"
+      }
+    ])
+    .then(function(remDepo){
+      let depoId = ""
+      for(var i =0; i < data.length; i++){
+        if (data[i].name === remDepo.removeDepo){
+          depoId = data[i].id
+        }
+      }
+      connection.query(
+        "DELETE FROM department Where ?",
+        {
+          id: depoId
+        },
+        function(err,res){
+          if(err) throw err;
+          console.log(`Department of ${remDepo.removeDepo} removed!`)
+          start();
+        })
+    })
+  })
 };
 function viewDepartment(){
-  console.log("view department");
+  connection.query("SELECT * FROM department;", function(err, data){
+    if (err) throw err;
+    console.table(data)
+    start();
+  })
 };
 
 function chooseRole(addFirstName, addLastName){
@@ -230,4 +409,90 @@ function chooseManager(addFirstName, addLastName, addEmpRole){
     })
 
   })
-}
+};
+function updateRole(empId){
+  connection.query("SELECT id, title FROM role;", function(err, data){
+    if (err) throw err;
+    let roleChoices = [];
+    for(var i=0; i < data.length; i++){
+      roleChoices.push(data[i].title)
+    }
+    inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "What is the Role You wish to update the Employee to?",
+        choices: roleChoices,
+        name: "chooseRole"
+      }
+    ])
+    .then(function(role){
+      let addEmpRole = "";
+      for(var i =0; i < data.length; i++){
+        if(data[i].title === role.chooseRole){
+          addEmpRole = data[i].id
+        }
+      }
+      connection.query(
+        "UPDATE employee SET ? WHERE ?",
+        [
+          {
+            role_id: addEmpRole
+          },
+          {
+            id: empId
+          }
+        ],
+        function(err, res){
+          if (err) throw err;
+          console.log(`Employee role updated to ${role.chooseRole}!`)
+          start();
+        })
+    })
+
+  })
+};
+function updateManager(empId){
+  connection.query("SELECT id, CONCAT(first_name, ' ', last_name) AS manager FROM employee;", function(err, data){
+    if (err) throw err;
+    let manChoices = ["No manager"];
+    for(var i=0; i < data.length; i++){
+      if(data[i].id !== empId){
+        manChoices.push(data[i].manager)
+      }
+    }
+    inquirer
+    .prompt([
+      {
+        type: "list",
+        message: "Who is the new Manager for the Employee?",
+        choices: manChoices,
+        name: "chooseMan"
+      }
+    ])
+    .then(function(man){
+      let addEmpMan = null;
+      for(var i =0; i < data.length; i++){
+        if(data[i].manager === man.chooseMan){
+          addEmpMan = data[i].id
+        }
+      }
+      connection.query(
+        "UPDATE employee SET ? WHERE ?",
+        [
+          {
+            manager_id: addEmpMan
+          },
+          {
+            id: empId
+          }
+        ],
+        function(err, res){
+          if (err) throw err;
+          console.log(`Employee manager updated to ${man.chooseMan}!`)
+          start();
+        })
+    })
+
+  })
+};
