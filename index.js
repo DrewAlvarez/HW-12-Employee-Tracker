@@ -282,11 +282,14 @@ function removeRole() {
 };
 
 function viewRoles() {
-    connection.query("SELECT * FROM role;", function(err, data) {
-        if (err) throw err;
-        console.table(data)
-        start();
-    })
+    connection.query(
+        "SELECT role.id, title, salary, name as department_name FROM role INNER JOIN department ON role.department_id = department.id",
+        function(err, data) {
+            if (err) throw err;
+            console.log("\nAll Roles\n")
+            console.table(data)
+            start();
+        })
 };
 
 function addDepartment() {
@@ -344,6 +347,7 @@ function removeDepartment() {
 function viewDepartment() {
     connection.query("SELECT * FROM department;", function(err, data) {
         if (err) throw err;
+        console.log("\nAll Departments\n")
         console.table(data)
         start();
     })
